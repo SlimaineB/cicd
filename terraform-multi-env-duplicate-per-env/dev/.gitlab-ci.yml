@@ -1,0 +1,53 @@
+include:
+  - 'helper.yml'
+
+variables:
+  TF_ROOT: ./dev  # The relative path to the root directory of the Terraform project
+  TF_STATE_NAME: default      # The name of the state file used by the GitLab Managed Terraform state backend
+  SECURE_ANALYZERS_PREFIX: "$CI_TEMPLATE_REGISTRY_HOST/security-products"
+  SAST_IMAGE_SUFFIX: ""
+  SAST_EXCLUDED_PATHS: "spec, test, tests, tmp"
+  PLAN: plan.cache
+  PLAN_JSON: plan.json
+
+
+cache:
+  key: "${TF_ROOT}"
+  paths:
+    - ${TF_ROOT}/.terraform/
+
+fmt-dev:
+  extends: .fmt
+  rules:
+      - changes:
+          - dev/**/*
+
+validate-dev:
+  extends: .validate
+  rules:
+      - changes:
+          - dev/**/*
+
+build-dev:
+  extends: .build
+  rules:
+      - changes:
+          - dev/**/*
+
+kics-iac-sast-dev:
+  extends: .kics-iac-sast
+  rules:
+      - changes:
+          - dev/**/*
+
+deploy-dev:
+  extends: .deploy
+  rules:
+      - changes:
+          - dev/**/*
+
+destroy-dev:
+  extends: .destroy
+  rules:
+      - changes:
+          - dev/**/*

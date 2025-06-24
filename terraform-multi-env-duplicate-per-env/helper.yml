@@ -1,0 +1,66 @@
+
+.fmt:
+  stage: validate
+  script:
+    - cd "${TF_ROOT}"
+    - gitlab-terraform fmt
+  allow_failure: true
+
+
+.validate:
+  stage: validate
+  script:
+    - cd "${TF_ROOT}"
+    - gitlab-terraform validate
+
+
+.build:
+  stage: build
+  before_script:
+    - apk --no-cache add jq
+    - alias convert_report="jq -r '([.resource_changes[]?.change.actions?]|flatten)|{\"create\":(map(select(.==\"create\"))|length),\"update\":(map(select(.==\"update\"))|length),\"delete\":(map(select(.==\"delete\"))|length)}'"
+  script:
+    - cd "${TF_ROOT}"
+    - gitlab-terraform plan -out=$PLAN
+    - gitlab-terraform plan-json | convert_report > $PLAN_JSON
+  resource_group: ${TF_STATE_NAME}
+  artifacts:
+    paths:
+      - ${TF_ROOT}/plan.cache
+    reports:
+      terraform: ${TF_ROOT}/$PLAN_JSON
+
+.kics-iac-sast:
+  stage: test
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+  image:
+    name: "$SAST_ANALYZER_IMAGE"
+  variables:
+    SEARCH_MAX_DEPTH: 4
+    SAST_ANALYZER_IMAGE_TAG: 3
+    SAST_ANALYZER_IMAGE: "$SECURE_ANALYZERS_PREFIX/kics:$SAST_ANALYZER_IMAGE_TAG$SAST_IMAGE_SUFFIX"
+  allow_failure: true
+  script:
+    - /analyzer run
+
+
+.deploy:
+  stage: deploy
+  script:
+    - cd "${TF_ROOT}"
+    - gitlab-terraform apply
+  resource_group: ${TF_STATE_NAME}
+  when: manual
+  rules:
+      - changes:
+          - ${TF_ENVIRONMENT}/**/*
+
+.destroy:
+  stage: cleanup
+  script:
+    - cd "${TF_ROOT}"
+    - gitlab-terraform destroy
+  resource_group: ${TF_STATE_NAME}
+  when: manual

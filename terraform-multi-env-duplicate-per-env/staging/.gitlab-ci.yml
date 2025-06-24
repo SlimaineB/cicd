@@ -1,0 +1,53 @@
+include:
+  - 'helper.yml'
+
+variables:
+  STAGING_TF_ROOT: ./staging  # The relative path to the root directory of the Terraform project
+  STAGING_TF_STATE_NAME: default      # The name of the state file used by the GitLab Managed Terraform state backend
+  SECURE_ANALYZERS_PREFIX: "$CI_TEMPLATE_REGISTRY_HOST/security-products"
+  SAST_IMAGE_SUFFIX: ""
+  SAST_EXCLUDED_PATHS: "spec, test, tests, tmp"
+  PLAN: plan.cache
+  PLAN_JSON: plan.json
+
+
+cache:
+  key: "${TF_ROOT}"
+  paths:
+    - ${TF_ROOT}/.terraform/
+
+fmt-staging:
+  extends: .fmt
+  rules:
+      - changes:
+          - staging/**/*
+
+validate-staging:
+  extends: .validate
+  rules:
+      - changes:
+          - staging/**/*
+
+build-staging:
+  extends: .build
+  rules:
+      - changes:
+          - staging/**/*
+
+kics-iac-sast-staging:
+  extends: .kics-iac-sast
+  rules:
+      - changes:
+          - staging/**/*
+
+deploy-staging:
+  extends: .deploy
+  rules:
+      - changes:
+          - staging/**/*
+
+destroy-staging:
+  extends: .destroy
+  rules:
+      - changes:
+          - staging/**/*

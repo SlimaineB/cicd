@@ -1,0 +1,19 @@
+include:
+  - 'dev/.gitlab-ci.yml'
+  - 'staging/.gitlab-ci.yml'
+  - 'production/.gitlab-ci.yml'
+  
+image:
+  name: "$CI_TEMPLATE_REGISTRY_HOST/gitlab-org/terraform-images/releases/1.1:v0.43.0"
+
+stages:          
+  - validate
+  - build
+  - test
+  - deploy
+  - cleanup
+
+variables:
+  # If not using GitLab's HTTP backend, remove this line and specify TF_HTTP_* variables
+  TF_STATE_NAME: default
+  TF_CACHE_KEY: default
