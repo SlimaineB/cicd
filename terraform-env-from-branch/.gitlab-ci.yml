@@ -1,0 +1,89 @@
+include:
+  - template: Terraform/Base.latest.gitlab-ci.yml
+
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+stages:
+  - validate
+  - plan
+  - apply
+
+# Valeur par défaut
+variables:
+  TF_VERSION: "1.6.0"
+  TF_IMAGE: hashicorp/terraform:${TF_VERSION}
+  TF_STATE_BASE_ADDRESS: $CI_API_V4_URL/projects/$CI_PROJECT_ID/terraform/state
+  CI_ENVIRONMENT_NAME: dev  # Valeur par défaut = "dev"
+
+default:
+  image: $TF_IMAGE
+
+cache:
+  key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+  paths:
+    - .terraform
+
+# Dérive l'env automatiquement selon la branche
+.rules:set-env:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      variables:
+        CI_ENVIRONMENT_NAME: dev
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        CI_ENVIRONMENT_NAME: staging
+    - if: '$CI_COMMIT_TAG'
+      variables:
+        CI_ENVIRONMENT_NAME: prod
+    - when: always  # fallback sur "dev"
+
+# -----------------------
+# VALIDATE
+# -----------------------
+validate:
+  stage: validate
+  extends: .rules:set-env
+  script:
+    - cd environments/$CI_ENVIRONMENT_NAME
+    - terraform init -input=false -backend-config="address=${TF_STATE_BASE_ADDRESS}/$CI_ENVIRONMENT_NAME"
+    - terraform validate
+  environment:
+    name: $CI_ENVIRONMENT_NAME
+
+# -----------------------
+# PLAN
+# -----------------------
+plan:
+  stage: plan
+  extends: .rules:set-env
+  script:
+    - cd environments/$CI_ENVIRONMENT_NAME
+    - terraform init -input=false -backend-config="address=${TF_STATE_BASE_ADDRESS}/$CI_ENVIRONMENT_NAME"
+    - terraform plan -input=false -out=tfplan
+    - terraform show -no-color tfplan > tfplan.txt
+  artifacts:
+    paths:
+      - environments/$CI_ENVIRONMENT_NAME/tfplan.txt
+  environment:
+    name: $CI_ENVIRONMENT_NAME
+
+# -----------------------
+# APPLY
+# -----------------------
+apply:
+  stage: apply
+  extends: .rules:set-env
+  script:
+    - cd environments/$CI_ENVIRONMENT_NAME
+    - terraform init -input=false -backend-config="address=${TF_STATE_BASE_ADDRESS}/$CI_ENVIRONMENT_NAME"
+    - terraform apply -auto-approve tfplan
+  dependencies:
+    - plan
+  when: manual
+  environment:
+    name: $CI_ENVIRONMENT_NAME
+    action: deploy

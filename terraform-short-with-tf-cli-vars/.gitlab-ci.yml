@@ -1,0 +1,20 @@
+stages:
+  - plan
+  - apply
+
+variables:
+  TF_CLI_ARGS: "-input=false"
+
+plan:
+  stage: plan
+  script:
+    - terraform init
+    - terraform plan -out=tfplan
+
+apply:
+  stage: apply
+  script:
+    - terraform apply tfplan
+  when: manual
+  only:
+    - main
