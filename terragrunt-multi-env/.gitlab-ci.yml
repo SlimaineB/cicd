@@ -1,0 +1,83 @@
+stages:
+  - validate
+  - plan
+  - apply
+
+variables:
+  TG_VERSION: "0.58.7"
+  TERRAGRUNT_DOWNLOAD: "${CI_PROJECT_DIR}/.terragrunt-cache"
+  TERRAGRUNT_TFPATH: "/usr/bin/terraform"
+  TERRAGRUNT_PARALLELISM: "4"
+  TF_INPUT: "false"
+
+default:
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl bash jq
+    - curl -L "https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64" -o /usr/local/bin/terragrunt
+    - chmod +x /usr/local/bin/terragrunt
+    - curl -L "https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip" -o terraform.zip
+    - unzip terraform.zip && mv terraform /usr/bin/
+
+# ---------------------------------
+# ENV DETECTION BASED ON BRANCH
+# ---------------------------------
+.variables:set-env:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      variables:
+        TARGET_ENV: "dev"
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        TARGET_ENV: "staging"
+    - if: '$CI_COMMIT_TAG'
+      variables:
+        TARGET_ENV: "prod"
+    - when: always  # fallback
+      variables:
+        TARGET_ENV: "dev"
+
+# ------------------------
+# VALIDATE
+# ------------------------
+validate:
+  stage: validate
+  extends: .variables:set-env
+  script:
+    - cd envs/${TARGET_ENV}
+    - terragrunt validate
+  allow_failure: false
+
+# ------------------------
+# PLAN
+# ------------------------
+plan:
+  stage: plan
+  extends: .variables:set-env
+  script:
+    - cd envs/${TARGET_ENV}
+    - terragrunt init
+    - terragrunt plan -out=tfplan
+    - terragrunt show -no-color tfplan > tfplan.txt
+  artifacts:
+    paths:
+      - envs/${TARGET_ENV}/tfplan.txt
+  only:
+    - merge_requests
+    - branches
+
+# ------------------------
+# APPLY
+# ------------------------
+apply:
+  stage: apply
+  extends: .variables:set-env
+  script:
+    - cd envs/${TARGET_ENV}
+    - terragrunt apply -auto-approve tfplan
+  dependencies:
+    - plan
+  when: manual
+  only:
+    - main
+    - tags
