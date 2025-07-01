@@ -1,0 +1,53 @@
+# This is a Docker Compose file for setting up GitLab, GitLab Runner, and a Docker Registry.
+# It includes the necessary configurations for each service, including network settings and volume mounts.
+networks:
+  gitlab_network:
+    driver: bridge
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:17.10.8-ce.0
+    container_name: gitlab
+    restart: unless-stopped
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://gitlab'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+    ports:
+      - "80:80"
+      - "2222:22"
+    networks:
+      - gitlab_network
+    volumes:
+      - "gitlab_data:/var/opt/gitlab"
+      - "gitlab_config:/etc/gitlab"
+      - "gitlab_logs:/var/log/gitlab"
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner
+    restart: unless-stopped
+    privileged: true
+    networks:
+      - gitlab_network
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "runner_config:/etc/gitlab-runner"
+
+  registry:
+    image: registry:2
+    container_name: registry
+    restart: unless-stopped
+    networks:
+      - gitlab_network
+    ports:
+      - "5000:5000"
+    volumes:
+      - registry_data:/var/lib/registry
+
+volumes:
+  gitlab_data:
+  gitlab_config:
+  gitlab_logs:
+  runner_config:
+  registry_data:

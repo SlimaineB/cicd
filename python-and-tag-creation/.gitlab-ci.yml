@@ -1,0 +1,75 @@
+stages:
+  - install
+  - lint
+  - test
+  - sast
+  - tag
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+cache:
+  paths:
+    - .cache/pip/
+
+install:
+  stage: install
+  image: python:3.11
+  script:
+    - python -m pip install --upgrade pip
+    - pip install -r requirements.txt
+  artifacts:
+    paths:
+      - .cache/pip/
+
+lint:
+  stage: lint
+  image: python:3.11
+  script:
+    - pip install flake8
+    - flake8 .
+  allow_failure: false
+
+test:
+  stage: test
+  image: python:3.11
+  script:
+    - pip install pytest pytest-cov
+    - pytest --cov=./ --cov-report=xml:coverage.xml
+  artifacts:
+    reports:
+      cobertura: coverage.xml
+    paths:
+      - coverage.xml
+      - tests/
+
+sast:
+  stage: sast
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_DRIVER: overlay2
+  script:
+    - apk add --no-cache git curl
+    - curl -sSL https://gitlab.com/gitlab-org/security-products/analyzers/python/binaries/raw/master/run.sh | bash
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+
+create_tag:
+  stage: tag
+  image: alpine/git
+  script:
+    - git config --global user.email "ci@example.com"
+    - git config --global user.name "GitLab CI"
+    - git remote set-url origin https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/${CI_PROJECT_PATH}.git
+    - git fetch origin
+    - git tag "release-${CI_PIPELINE_IID}"
+    - git push origin "release-${CI_PIPELINE_IID}"
+  only:
+    - main
+  dependencies:
+    - test
+    - lint
+    - sast

@@ -1,0 +1,25 @@
+stages:
+  - init
+  - build
+  - test
+  - deploy
+
+init-job:
+  stage: init
+  script:
+    - echo " Initialisation du pipeline..."
+
+build-job:
+  stage: build
+  script:
+    - echo " Construction en cours..."
+
+test-job:
+  stage: test
+  script:
+    - echo " Tests exécutés avec succès !"
+
+deploy-job:
+  stage: deploy
+  script:
+    - echo " Déploiement terminé !"
