@@ -1,0 +1,48 @@
+---
+image: dtzar/helm-kubectl:3.5.3 #last version using k8s 1.20
+
+default:
+  before_script:
+    - cd charts/${HELM_NAME}
+    - kubectl config set-context --current --namespace=${KUBERNETES_NAMESPACE}
+    - kubectl create secret docker-registry registry-harbor --docker-server="$DOCKER_REGISTRY" --docker-username="$DOCKER_REGISTRY_USER" --docker-password=$(cat "$DOCKER_REGISTRY_PASSWORD") --docker-email="ci@local.local" -o yaml --dry-run=client | kubectl apply -f -
+    - helm dependencies update .
+
+.lint:
+  script:
+    - helm lint .
+
+.helm_install:
+  script:
+    - helm upgrade --dry-run --install ${HELM_NAME} --atomic ./ -f values.yaml
+
+.dev_push:
+  script:
+    - apk add git
+    - helm plugin install https://github.com/chartmuseum/helm-push
+    - helm repo add --username=${DOCKER_REGISTRY_USER} --password=$(cat "$DOCKER_REGISTRY_PASSWORD") ${HELM_PROJECT} https://${DOCKER_REGISTRY}/chartrepo/${HELM_PROJECT}
+    - helm package .
+    - helm cm-push . ${HELM_PROJECT} --version=0.0.0-dev
+
+.release:
+  script:
+    - apk add git
+    - helm plugin install https://github.com/chartmuseum/helm-push
+    - helm repo add --username=${DOCKER_REGISTRY_USER} --password=$(cat "$DOCKER_REGISTRY_PASSWORD") ${HELM_PROJECT} https://${DOCKER_REGISTRY}/chartrepo/${HELM_PROJECT}
+    - helm package .
+    - helm cm-push . ${HELM_PROJECT}
+
+.release_tag:
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  before_script:
+    - cd charts/${HELM_NAME}
+  script:
+    - echo "Running the release job."
+  release:
+    name: 'Release $CHART_RELEASE'
+    description: 'Created using the release-ci'
+    tag_name: '$CHART_RELEASE'
+    assets:
+      links:
+        - name: "$CHART_RELEASE"
+          url: https://{DOCKER_REGISTRY}/harbor/projects/{PROJECT_NUM}/helm-charts/${HELM_NAME}/versions/$CHART_VERSION

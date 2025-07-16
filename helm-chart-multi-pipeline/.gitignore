@@ -1,0 +1,5 @@
+out
+gen
+manifests/
+chart.lock
+*.tgz
