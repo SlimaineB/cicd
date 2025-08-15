@@ -1,7 +1,7 @@
 PY_VERSION=3.12
 IMAGE_NAME=local/demo:dev
 
-.PHONY: install dev test lint cov audit bandit secrets docker-build
+.PHONY: install dev test lint cov audit bandit secrets docker-build cleanup
 
 install:
 	uv sync --no-dev
@@ -9,10 +9,10 @@ install:
 local-run:
 	uv run uvicorn app.app:app --host 0.0.0.0 --port 8080
 
-precommit_install:
+precommit-install:
 	uv run pre-commit install
 
-precommit_run:
+precommit-run:
 	uv run pre-commit run --all-files
 
 dev:
@@ -40,5 +40,12 @@ secrets:
 
 docker-build:
 	docker build -t $(IMAGE_NAME) .
+
+
+gitlabci-local:
+	uv run gitlabci-local --privileged=false -p -c .gitlab-ci.yml && sudo rm -Rrf .venv
+
+cleanup:
+	sudo rm -rf .venv requirements.txt coverage.xml junit.xml bandit.json pip-audit.json trufflehog.json
 
 all: lint test cov audit bandit secrets
