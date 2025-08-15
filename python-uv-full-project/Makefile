@@ -12,7 +12,6 @@ local-run:
 precommit_install:
 	uv run pre-commit install
 
-
 precommit_run:
 	uv run pre-commit run --all-files
 
