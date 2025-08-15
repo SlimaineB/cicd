@@ -6,7 +6,7 @@ variables:
 stages:
   - generate
   - deploy
- 
+
 chart-generator:
   stage: generate
   image: alpine:3.15

@@ -5,7 +5,7 @@ TOFU_VERSION	  := $(shell cat .terraform-version)
 # Select Terraform or OpenTofu engine
 TF_ENGINE ?= terraform
 ifeq ($(TF_ENGINE), terraform)
-	TF_BINARY  := terraform 
+	TF_BINARY  := terraform
 	TF_VERSION := $(TERRAFORM_VERSION)
 else ifeq ($(TF_ENGINE), opentofu)
 	TF_BINARY  := tofu
@@ -78,7 +78,7 @@ install_apt:
 	sudo apt-get install -y $(APT_PACKAGES)
 	@echo "==> Upgrading pip and installing checkov"
 	pip install --upgrade pip
-	pip install checkov detect-secrets 
+	pip install checkov detect-secrets
 	@echo "==> Installing Terraform from HashiCorp repo"
 	curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
 	echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $$(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
@@ -139,7 +139,7 @@ test_tflint:
 
 terraform_test:
 	@echo "==> Running Terraform tests"
-	$(TF_BINARY) -chdir=terraform test 
+	$(TF_BINARY) -chdir=terraform test
 
 # Security
 
@@ -180,4 +180,4 @@ test_secrets_detect:
 	detect-secrets scan --all-files terraform > .secrets.baseline
 	detect-secrets audit .secrets.baseline
 
-test_secrets: test_secrets_detect 
+test_secrets: test_secrets_detect

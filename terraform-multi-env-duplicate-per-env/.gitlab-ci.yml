@@ -2,11 +2,11 @@ include:
   - 'dev/.gitlab-ci.yml'
   - 'staging/.gitlab-ci.yml'
   - 'production/.gitlab-ci.yml'
-  
+
 image:
   name: "$CI_TEMPLATE_REGISTRY_HOST/gitlab-org/terraform-images/releases/1.1:v0.43.0"
 
-stages:          
+stages:
   - validate
   - build
   - test
