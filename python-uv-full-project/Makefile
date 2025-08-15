@@ -19,13 +19,17 @@ lint:
 	uv run ruff check .
 
 audit:
-	uv run pip-audit -r <(uv export --format=requirements) --progress-spinner=off || true
+	uv export --format=requirements.txt > requirements.txt
+	uv run pip-audit -r requirements.txt --progress-spinner=off || true
+	rm requirements.txt
 
 bandit:
-	uv run bandit -q -r . -c pyproject.toml || true
+	uv run bandit -q -r app -c pyproject.toml || true
 
 secrets:
 	docker run --rm -v $$PWD:/repo -w /repo ghcr.io/trufflesecurity/trufflehog:latest filesystem --no-update --fail --only-verified . || true
 
 docker-build:
 	docker build -t $(IMAGE_NAME) .
+
+all: lint test audit bandit secrets
