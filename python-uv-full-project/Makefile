@@ -6,6 +6,12 @@ IMAGE_NAME=local/demo:dev
 install:
 	uv sync --no-dev
 
+local-run:
+	uv run uvicorn app.app:app --host 0.0.0.0 --port 8080
+
+precommit_run:
+	uv run pre-commit run --all-files 
+
 dev:
 	uv sync --dev
 
@@ -32,4 +38,4 @@ secrets:
 docker-build:
 	docker build -t $(IMAGE_NAME) .
 
-all: lint test audit bandit secrets
+all: lint test cov audit bandit secrets
