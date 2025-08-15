@@ -9,8 +9,12 @@ install:
 local-run:
 	uv run uvicorn app.app:app --host 0.0.0.0 --port 8080
 
+precommit_install:
+	uv run pre-commit install
+
+
 precommit_run:
-	uv run pre-commit run --all-files 
+	uv run pre-commit run --all-files
 
 dev:
 	uv sync --dev
