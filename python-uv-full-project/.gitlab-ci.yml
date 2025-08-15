@@ -8,9 +8,17 @@ variables:
   ECR_REPOSITORY: "$CI_PROJECT_PATH_SLUG"
   IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
   IMAGE_URI: "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG"
+  KANIKO_CACHE_ENABLED: "true"
   KANIKO_CACHE_REPO: "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:cache"
   # Trivy: seuil de gravité
   TRIVY_SEVERITY: "HIGH,CRITICAL"
+
+# Override for gitlabci-local
+.local:
+  variables:
+    KANIKO_CACHE_ENABLED: "false"
+    KANIKO_CACHE_REPO: ""
+
 
 .default_rules: &default_rules
   rules:
@@ -121,19 +129,12 @@ security:secrets:
 build:image-tar:
   stage: build
   image:
-    name: gcr.io/kaniko-project/executor:latest
+    name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
   variables:
     DOCKER_CONFIG: "/kaniko/.docker"
   script:
-    - /kaniko/executor \
-        --context "$CI_PROJECT_DIR" \
-        --dockerfile "$CI_PROJECT_DIR/Dockerfile" \
-        --no-push \
-        --tarPath "$CI_PROJECT_DIR/image.tar" \
-        --cache=true \
-        --cache-repo "$KANIKO_CACHE_REPO" \
-        --snapshotMode=redo --use-new-run --single-snapshot
+    - /kaniko/executor --context "$CI_PROJECT_DIR" --dockerfile "$CI_PROJECT_DIR/Dockerfile" --no-push --tarPath "$CI_PROJECT_DIR/image.tar" --cache="$KANIKO_CACHE_ENABLED" --cache-repo "$KANIKO_CACHE_REPO" --snapshot-mode=redo --use-new-run --single-snapshot
   artifacts:
     paths: [ image.tar ]
     expire_in: 1 day
@@ -149,10 +150,10 @@ scan:image:
   image: aquasec/trivy:latest
   script:
     - trivy --version
-    - trivy image --input image.tar --severity $TRIVY_SEVERITY --exit-code 1 --format sarif -o trivy.sarif
+    - trivy image --input image.tar --severity $TRIVY_SEVERITY --exit-code 1 --format json -o trivy.json
   artifacts:
     when: always
-    paths: [ trivy.sarif ]
+    paths: [ trivy.json ]
     expire_in: 7 days
 
 # ------------------------------
@@ -207,12 +208,7 @@ package:image-kaniko:
   script:
     - mkdir -p /kaniko/.docker
     - cp .docker/config.json /kaniko/.docker/config.json
-    - /kaniko/executor \
-        --context "$CI_PROJECT_DIR" \
-        --dockerfile "$CI_PROJECT_DIR/Dockerfile" \
-        --destination "$IMAGE_URI" \
-        --cache=true --cache-repo "$KANIKO_CACHE_REPO" \
-        --snapshotMode=redo --use-new-run --single-snapshot
+    - /kaniko/executor --context "$CI_PROJECT_DIR" --dockerfile "$CI_PROJECT_DIR/Dockerfile" --destination "$IMAGE_URI" --cache=true --cache-repo "$KANIKO_CACHE_REPO" --snapshot-mode=redo --use-new-run --single-snapshot
   rules:
     - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH" # push auto sur la branche par défaut
       when: on_success

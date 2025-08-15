@@ -1,7 +1,7 @@
 PY_VERSION=3.12
 IMAGE_NAME=local/demo:dev
 
-.PHONY: install dev test lint cov audit bandit secrets docker-build cleanup
+.PHONY: install dev test lint cov audit bandit secrets docker-build gitlabci-local cleanup
 
 install:
 	uv sync --no-dev
