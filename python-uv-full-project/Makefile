@@ -41,7 +41,6 @@ secrets:
 docker-build:
 	docker build -t $(IMAGE_NAME) .
 
-
 gitlabci-local:
 	uv run gitlabci-local --privileged=false -p -c .gitlab-ci.yml && sudo rm -Rrf .venv
 
