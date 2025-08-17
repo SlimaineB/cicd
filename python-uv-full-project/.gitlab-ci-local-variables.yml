@@ -1,0 +1,2 @@
+    KANIKO_CACHE_ENABLED: "false"
+    KANIKO_CACHE_REPO: ""

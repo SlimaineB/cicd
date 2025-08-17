@@ -41,10 +41,13 @@ secrets:
 docker-build:
 	docker build -t $(IMAGE_NAME) .
 
-gitlabci-local:
-	uv run gitlabci-local --privileged=false -p -c .gitlab-ci.yml && sudo rm -Rrf .venv
+gitlab-ci-local:
+	gitlab-ci-local
 
 cleanup:
 	sudo rm -rf .venv requirements.txt coverage.xml junit.xml bandit.json pip-audit.json trufflehog.json
+
+commit:
+	git add . && git commit -m "Update Makefile and CI configuration"; git push
 
 all: lint test cov audit bandit secrets

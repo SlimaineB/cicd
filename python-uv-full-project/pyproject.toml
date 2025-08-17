@@ -17,7 +17,6 @@ targets = ["."]
 [dependency-groups]
 dev = [
     "bandit>=1.8.6",
-    "gitlabci-local>=13.0.1",
     "httpx>=0.28.1",
     "pip-audit>=2.9.0",
     "pre-commit>=4.3.0",
